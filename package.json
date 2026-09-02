@@ -1,0 +1,11 @@
+{
+  "name": "deep-focus",
+  "private": true,
+  "workspaces": ["desktop", "firebase/functions"],
+  "scripts": {
+    "build": "npm run build -w @deep-focus/functions && npm run build -w @deep-focus/desktop",
+    "test": "npm run test -w @deep-focus/functions && npm run test -w @deep-focus/desktop",
+    "desktop": "npm run dev -w @deep-focus/desktop",
+    "emulators": "firebase emulators:start"
+  }
+}

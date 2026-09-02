@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.gradle/
+**/build/
+android/local.properties
+android/app/google-services.json
+desktop/.env
+firebase/functions/.env
+firebase-debug.log
+.firebase/
+*.log
+

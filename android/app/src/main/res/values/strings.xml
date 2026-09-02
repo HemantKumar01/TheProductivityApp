@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Deep Focus</string>
+    <string name="accessibility_description">Blocks selected apps while an immutable focus session is active.</string>
+</resources>
+

@@ -1,0 +1,22 @@
+{
+  "name": "@deep-focus/functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": { "node": "22" },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test lib/**/*.test.js",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
+    "deploy": "firebase deploy --only functions,firestore"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.4.0",
+    "luxon": "^3.7.1"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.6.2",
+    "typescript": "^5.9.2"
+  }
+}
+

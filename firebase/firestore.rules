@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isNotFocusing(uid) {
+      let lock = /databases/$(database)/documents/users/$(uid)/internal/sessionLock;
+      return !exists(lock) || get(lock).data.activeUntil <= request.time;
+    }
+
+    match /users/{uid} {
+      allow read: if signedInAs(uid);
+      allow create, update: if signedInAs(uid);
+      allow delete: if false;
+
+      match /settings/{document} {
+        allow read: if signedInAs(uid);
+        allow write: if signedInAs(uid) && isNotFocusing(uid)
+          && request.resource.data.keys().hasOnly([
+            'androidPackages', 'websiteDomains', 'allowedWebsiteDomains', 'updatedAt'
+          ]);
+      }
+
+      match /schedules/{scheduleId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if signedInAs(uid)
+          && request.resource.data.keys().hasAll([
+            'enabled', 'weekdays', 'localTime', 'timeZone', 'durationMinutes'
+          ])
+          && request.resource.data.enabled is bool
+          && request.resource.data.weekdays is list
+          && request.resource.data.weekdays.size() > 0
+          && request.resource.data.weekdays.size() <= 7
+          && request.resource.data.localTime is string
+          && request.resource.data.localTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+          && request.resource.data.timeZone is string
+          && request.resource.data.durationMinutes is int
+          && request.resource.data.durationMinutes >= 5
+          && request.resource.data.durationMinutes <= 480;
+        allow delete: if signedInAs(uid);
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if signedInAs(uid);
+        // Only trusted Cloud Functions create sessions. They are immutable forever.
+        allow write: if false;
+      }
+
+      match /internal/{document} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

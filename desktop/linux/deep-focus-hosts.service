@@ -1,0 +1,20 @@
+[Unit]
+Description=Deep Focus domain and subdomain blocker
+Wants=systemd-resolved.service
+After=local-fs.target network.target systemd-resolved.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/deep-focus/deep-focus-hosts-daemon.py
+StateDirectory=deep-focus
+Restart=always
+RestartSec=2
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/etc/hosts /var/lib/deep-focus /run
+
+[Install]
+WantedBy=multi-user.target
