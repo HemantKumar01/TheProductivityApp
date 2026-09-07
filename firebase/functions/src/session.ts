@@ -18,6 +18,10 @@ export function validateDuration(value: unknown): number {
   return Number(value);
 }
 
+export function scheduleExtendsFocus(activeUntilMillis: number | null, scheduledEndsAtMillis: number): boolean {
+  return activeUntilMillis === null || activeUntilMillis < scheduledEndsAtMillis;
+}
+
 export function dueLocalDate(schedule: ScheduleData, now: Date): string | null {
   if (!schedule.enabled || !DateTime.local().setZone(schedule.timeZone).isValid) return null;
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.localTime)) return null;
@@ -33,4 +37,3 @@ export function dueLocalDate(schedule: ScheduleData, now: Date): string | null {
   const date = localNow.toISODate();
   return date && date !== schedule.lastMaterializedDate ? date : null;
 }
-

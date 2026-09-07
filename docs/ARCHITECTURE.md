@@ -9,7 +9,8 @@ the existing session; it never shortens it. Neither client exposes an end action
 ```text
 Android app ─┐                         ┌─ Firestore session stream ─ Android accessibility service
              ├─ callable function ────┤
-Desktop app ─┘                         └─ Firestore session stream ─ Linux DNS policy service
+Desktop app ─┘                         ├─ Firestore session stream ─ Linux DNS policy service
+                                      └─ Firestore session stream ─ Windows DNS policy service
                            ▲
 Cloud Scheduler ─ schedule materializer
 ```
@@ -37,5 +38,13 @@ or back-to-back intervals are merged before totals and streaks are calculated.
   the deadline across restarts and exposes activation only. Browsers configured with
   a custom DNS-over-HTTPS provider can bypass system DNS, and a root user can always
   undo enforcement.
+- Windows uses exact and suffix NRPT rules to route blocked namespaces to a
+  LocalSystem loopback DNS resolver. The resolver returns blocked responses except
+  for explicit allowed subdomain trees, which it forwards directly to active
+  adapter DNS servers. An activation-only named pipe accepts policy updates from
+  authenticated users; the first active caller's SID owns the policy until expiry.
+  State is stored under `%ProgramData%`, deadlines survive restarts, and install,
+  update, and uninstall are refused while a deadline is active. Custom browser DoH
+  and a Windows administrator remain outside this enforcement boundary.
 - Website blocking applies to a domain and all of its subdomains. Explicit entries in
   `allowedWebsiteDomains` override a blocked parent for that subdomain subtree.

@@ -6,26 +6,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_http_1 = __importDefault(require("node:http"));
-const node_net_1 = __importDefault(require("node:net"));
 const node_path_1 = __importDefault(require("node:path"));
 const autostart_1 = require("./autostart");
+const enforcement_1 = require("./enforcement");
 let window = null;
 let tray = null;
 let quitting = false;
 let rendererServer = null;
-const socketPath = process.env.DEEP_FOCUS_SOCKET || "/run/deep-focus.sock";
+function configureUserDataPath() {
+    const appData = electron_1.app.getPath("appData");
+    const stablePath = node_path_1.default.join(appData, "deep-focus");
+    const legacyPath = node_path_1.default.join(appData, "@deep-focus", "desktop");
+    if (!node_fs_1.default.existsSync(stablePath) && node_fs_1.default.existsSync(legacyPath)) {
+        node_fs_1.default.cpSync(legacyPath, stablePath, {
+            recursive: true,
+            filter: (source) => !node_path_1.default.basename(source).startsWith("Singleton"),
+        });
+    }
+    electron_1.app.setPath("userData", stablePath);
+}
 function ensureLinuxAutostart() {
     if (process.platform !== "linux")
         return;
     const autostartFile = (0, autostart_1.linuxAutostartPath)(electron_1.app.getPath("home"), process.env.XDG_CONFIG_HOME);
     const command = electron_1.app.isPackaged
-        ? [process.execPath, "--autostart"]
+        // process.execPath is inside AppImage's temporary mount. APPIMAGE is the
+        // stable executable path that remains valid at the next graphical login.
+        ? [process.env.APPIMAGE || process.execPath, "--autostart"]
         : [process.execPath, electron_1.app.getAppPath(), "--autostart"];
     const entry = (0, autostart_1.buildLinuxAutostartEntry)(command);
     node_fs_1.default.mkdirSync(node_path_1.default.dirname(autostartFile), { recursive: true, mode: 0o700 });
     if (!node_fs_1.default.existsSync(autostartFile) || node_fs_1.default.readFileSync(autostartFile, "utf8") !== entry) {
         node_fs_1.default.writeFileSync(autostartFile, entry, { mode: 0o600 });
     }
+}
+function ensureWindowsAutostart() {
+    if (process.platform !== "win32" || !electron_1.app.isPackaged)
+        return;
+    electron_1.app.setLoginItemSettings({ openAtLogin: true, path: process.execPath, args: ["--autostart"] });
 }
 function startRendererServer() {
     const root = node_path_1.default.resolve(__dirname, "../dist");
@@ -67,6 +85,7 @@ function startRendererServer() {
     });
 }
 function createWindow(startHidden) {
+    const iconPath = node_path_1.default.resolve(__dirname, "../assets/icon.png");
     window = new electron_1.BrowserWindow({
         show: !startHidden,
         width: 1180,
@@ -74,7 +93,8 @@ function createWindow(startHidden) {
         minWidth: 920,
         minHeight: 640,
         backgroundColor: "#171a16",
-        titleBarStyle: "hiddenInset",
+        icon: iconPath,
+        titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
         webPreferences: {
             preload: node_path_1.default.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -93,30 +113,7 @@ function createWindow(startHidden) {
         }
     });
 }
-function sendActivation(input) {
-    return new Promise((resolve) => {
-        const client = node_net_1.default.createConnection(socketPath);
-        let response = "";
-        client.setEncoding("utf8");
-        client.setTimeout(4_000);
-        client.on("connect", () => client.write(`${JSON.stringify({ command: "activate", ...input })}\n`));
-        client.on("data", (chunk) => {
-            response += chunk;
-            if (response.includes("\n"))
-                client.end();
-        });
-        client.on("end", () => {
-            try {
-                resolve(JSON.parse(response.trim()));
-            }
-            catch {
-                resolve({ ok: false, error: "The Linux blocker returned an invalid response." });
-            }
-        });
-        client.on("timeout", () => { client.destroy(); resolve({ ok: false, error: "The Linux blocker timed out." }); });
-        client.on("error", () => resolve({ ok: false, error: "Linux blocker unavailable. Run the Linux installer with sudo; Deep Focus will retry automatically." }));
-    });
-}
+configureUserDataPath();
 if (!electron_1.app.requestSingleInstanceLock()) {
     electron_1.app.quit();
 }
@@ -128,10 +125,13 @@ else {
         window?.focus();
     });
     electron_1.app.whenReady().then(() => {
-        electron_1.ipcMain.handle("focus:enforce", (_event, input) => sendActivation(input));
+        electron_1.ipcMain.handle("focus:enforce", (_event, input) => (0, enforcement_1.sendActivation)(process.platform, input));
         ensureLinuxAutostart();
+        ensureWindowsAutostart();
         createWindow(process.argv.includes("--autostart"));
-        tray = new electron_1.Tray(electron_1.nativeImage.createEmpty());
+        const trayIconPath = node_path_1.default.resolve(__dirname, "../assets/icon.png");
+        const trayImage = electron_1.nativeImage.createFromPath(trayIconPath).resize({ width: 22, height: 22 });
+        tray = new electron_1.Tray(trayImage);
         tray.setToolTip("Deep Focus is running");
         tray.setContextMenu(electron_1.Menu.buildFromTemplate([{ label: "Open Deep Focus", click: () => window?.show() }]));
         tray.on("double-click", () => window?.show());

@@ -132,6 +132,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(busy = false)
     }
 
+    fun deleteSchedule(scheduleId: String) = viewModelScope.launch {
+        val state = _state.value
+        if (state.sessions.any { it.startsAtMillis <= System.currentTimeMillis() && it.endsAtMillis > System.currentTimeMillis() }) return@launch
+        _state.value = _state.value.copy(busy = true, error = null)
+        runCatching { repository.deleteSchedule(scheduleId) }
+            .onFailure { _state.value = _state.value.copy(error = it.localizedMessage) }
+        _state.value = _state.value.copy(busy = false)
+    }
+
     fun clearError() { _state.value = _state.value.copy(error = null) }
 
     override fun onCleared() {

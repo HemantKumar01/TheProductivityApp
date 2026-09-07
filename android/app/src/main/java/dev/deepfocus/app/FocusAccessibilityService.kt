@@ -11,16 +11,18 @@ class FocusAccessibilityService : AccessibilityService() {
     private var blockedPackages: Set<String> = emptySet()
     private var activeUntilMillis: Long = 0
     private val listeners = mutableListOf<ListenerRegistration>()
+    private val auth by lazy { FirebaseAuth.getInstance() }
+    private val authListener = FirebaseAuth.AuthStateListener { attachListeners() }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        attachListeners()
+        auth.addAuthStateListener(authListener)
     }
 
     private fun attachListeners() {
         listeners.forEach { it.remove() }
         listeners.clear()
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = auth.currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
         listeners += db.document("users/$uid/settings/blocking").addSnapshotListener { snapshot, _ ->
             blockedPackages = (snapshot?.get("androidPackages") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
@@ -47,9 +49,9 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        auth.removeAuthStateListener(authListener)
         listeners.forEach { it.remove() }
         listeners.clear()
         super.onDestroy()
     }
 }
-

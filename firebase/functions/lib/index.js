@@ -46,26 +46,29 @@ exports.startFocus = (0, https_1.onCall)({ region: "asia-south1" }, async (reque
 exports.materializeSchedules = (0, scheduler_1.onSchedule)({ schedule: "every 1 minutes", region: "asia-south1" }, async () => {
     const now = new Date();
     const snapshots = await db.collectionGroup("schedules").where("enabled", "==", true).get();
+    const outcomes = { created: 0, covered: 0, notDue: 0 };
     await Promise.all(snapshots.docs.map(async (scheduleDoc) => {
         try {
             const data = scheduleDoc.data();
             const localDate = (0, session_1.dueLocalDate)(data, now);
-            if (!localDate)
+            if (!localDate) {
+                outcomes.notDue += 1;
                 return;
+            }
             const userRef = scheduleDoc.ref.parent.parent;
             if (!userRef)
                 return;
             const lockRef = userRef.collection("internal").doc("sessionLock");
-            await db.runTransaction(async (transaction) => {
+            const outcome = await db.runTransaction(async (transaction) => {
                 const freshSchedule = await transaction.get(scheduleDoc.ref);
                 const freshData = freshSchedule.data();
                 if (!freshData || (0, session_1.dueLocalDate)(freshData, now) !== localDate)
-                    return;
+                    return "notDue";
                 const lock = await transaction.get(lockRef);
                 const startsAt = firestore_1.Timestamp.fromDate(now);
                 const endsAt = firestore_1.Timestamp.fromMillis(startsAt.toMillis() + (0, session_1.validateDuration)(freshData.durationMinutes) * 60_000);
                 const activeUntil = lock.get("activeUntil");
-                if (!activeUntil || activeUntil.toMillis() <= startsAt.toMillis()) {
+                if ((0, session_1.scheduleExtendsFocus)(activeUntil?.toMillis() ?? null, endsAt.toMillis())) {
                     const sessionRef = userRef.collection("sessions").doc();
                     transaction.set(sessionRef, {
                         startsAt,
@@ -75,14 +78,18 @@ exports.materializeSchedules = (0, scheduler_1.onSchedule)({ schedule: "every 1 
                         createdAt: firestore_1.FieldValue.serverTimestamp(),
                     });
                     transaction.set(lockRef, { activeSessionId: sessionRef.id, startsAt, activeUntil: endsAt }, { merge: true });
+                    transaction.update(scheduleDoc.ref, { lastMaterializedDate: localDate, lastMaterializedAt: firestore_1.FieldValue.serverTimestamp() });
+                    return "created";
                 }
                 transaction.update(scheduleDoc.ref, { lastMaterializedDate: localDate, lastMaterializedAt: firestore_1.FieldValue.serverTimestamp() });
+                return "covered";
             });
+            outcomes[outcome] += 1;
         }
         catch (error) {
             firebase_functions_1.logger.error("Schedule could not be materialized", { schedule: scheduleDoc.ref.path, error });
         }
     }));
-    firebase_functions_1.logger.info("Schedule sweep complete", { checked: snapshots.size });
+    firebase_functions_1.logger.info("Schedule sweep complete", { checked: snapshots.size, ...outcomes });
 });
 //# sourceMappingURL=index.js.map

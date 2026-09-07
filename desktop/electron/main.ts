@@ -1,27 +1,46 @@
 import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } from "electron";
 import fs from "node:fs";
 import http from "node:http";
-import net from "node:net";
 import path from "node:path";
 import { buildLinuxAutostartEntry, linuxAutostartPath } from "./autostart";
+import { sendActivation } from "./enforcement";
 
 let window: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
 let rendererServer: http.Server | null = null;
-const socketPath = process.env.DEEP_FOCUS_SOCKET || "/run/deep-focus.sock";
+
+function configureUserDataPath() {
+  const appData = app.getPath("appData");
+  const stablePath = path.join(appData, "deep-focus");
+  const legacyPath = path.join(appData, "@deep-focus", "desktop");
+  if (!fs.existsSync(stablePath) && fs.existsSync(legacyPath)) {
+    fs.cpSync(legacyPath, stablePath, {
+      recursive: true,
+      filter: (source) => !path.basename(source).startsWith("Singleton"),
+    });
+  }
+  app.setPath("userData", stablePath);
+}
 
 function ensureLinuxAutostart() {
   if (process.platform !== "linux") return;
   const autostartFile = linuxAutostartPath(app.getPath("home"), process.env.XDG_CONFIG_HOME);
   const command = app.isPackaged
-    ? [process.execPath, "--autostart"]
+    // process.execPath is inside AppImage's temporary mount. APPIMAGE is the
+    // stable executable path that remains valid at the next graphical login.
+    ? [process.env.APPIMAGE || process.execPath, "--autostart"]
     : [process.execPath, app.getAppPath(), "--autostart"];
   const entry = buildLinuxAutostartEntry(command);
   fs.mkdirSync(path.dirname(autostartFile), { recursive: true, mode: 0o700 });
   if (!fs.existsSync(autostartFile) || fs.readFileSync(autostartFile, "utf8") !== entry) {
     fs.writeFileSync(autostartFile, entry, { mode: 0o600 });
   }
+}
+
+function ensureWindowsAutostart() {
+  if (process.platform !== "win32" || !app.isPackaged) return;
+  app.setLoginItemSettings({ openAtLogin: true, path: process.execPath, args: ["--autostart"] });
 }
 
 function startRendererServer(): Promise<string> {
@@ -65,6 +84,7 @@ function startRendererServer(): Promise<string> {
 }
 
 function createWindow(startHidden: boolean) {
+  const iconPath = path.resolve(__dirname, "../assets/icon.png");
   window = new BrowserWindow({
     show: !startHidden,
     width: 1180,
@@ -72,7 +92,8 @@ function createWindow(startHidden: boolean) {
     minWidth: 920,
     minHeight: 640,
     backgroundColor: "#171a16",
-    titleBarStyle: "hiddenInset",
+    icon: iconPath,
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -90,25 +111,7 @@ function createWindow(startHidden: boolean) {
   });
 }
 
-function sendActivation(input: { domains: string[]; allowedDomains: string[]; endsAtMillis: number }): Promise<{ ok: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    const client = net.createConnection(socketPath);
-    let response = "";
-    client.setEncoding("utf8");
-    client.setTimeout(4_000);
-    client.on("connect", () => client.write(`${JSON.stringify({ command: "activate", ...input })}\n`));
-    client.on("data", (chunk) => {
-      response += chunk;
-      if (response.includes("\n")) client.end();
-    });
-    client.on("end", () => {
-      try { resolve(JSON.parse(response.trim())); }
-      catch { resolve({ ok: false, error: "The Linux blocker returned an invalid response." }); }
-    });
-    client.on("timeout", () => { client.destroy(); resolve({ ok: false, error: "The Linux blocker timed out." }); });
-    client.on("error", () => resolve({ ok: false, error: "Linux blocker unavailable. Run the Linux installer with sudo; Deep Focus will retry automatically." }));
-  });
-}
+configureUserDataPath();
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -120,10 +123,13 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
-    ipcMain.handle("focus:enforce", (_event, input) => sendActivation(input));
+    ipcMain.handle("focus:enforce", (_event, input) => sendActivation(process.platform, input));
     ensureLinuxAutostart();
+    ensureWindowsAutostart();
     createWindow(process.argv.includes("--autostart"));
-    tray = new Tray(nativeImage.createEmpty());
+    const trayIconPath = path.resolve(__dirname, "../assets/icon.png");
+    const trayImage = nativeImage.createFromPath(trayIconPath).resize({ width: 22, height: 22 });
+    tray = new Tray(trayImage);
     tray.setToolTip("Deep Focus is running");
     tray.setContextMenu(Menu.buildFromTemplate([{ label: "Open Deep Focus", click: () => window?.show() }]));
     tray.on("double-click", () => window?.show());

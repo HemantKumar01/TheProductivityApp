@@ -2,6 +2,8 @@ node_modules/
 dist/
 .gradle/
 **/build/
+**/bin/
+**/obj/
 android/local.properties
 android/app/google-services.json
 desktop/.env
@@ -9,4 +11,6 @@ firebase/functions/.env
 firebase-debug.log
 .firebase/
 *.log
-
+desktop/release/
+desktop/windows/publish/*
+!desktop/windows/publish/.gitkeep

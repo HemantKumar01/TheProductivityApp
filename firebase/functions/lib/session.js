@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateDuration = validateDuration;
+exports.scheduleExtendsFocus = scheduleExtendsFocus;
 exports.dueLocalDate = dueLocalDate;
 const luxon_1 = require("luxon");
 function validateDuration(value) {
@@ -8,6 +9,9 @@ function validateDuration(value) {
         throw new Error("Duration must be a whole number from 5 to 480 minutes.");
     }
     return Number(value);
+}
+function scheduleExtendsFocus(activeUntilMillis, scheduledEndsAtMillis) {
+    return activeUntilMillis === null || activeUntilMillis < scheduledEndsAtMillis;
 }
 function dueLocalDate(schedule, now) {
     if (!schedule.enabled || !luxon_1.DateTime.local().setZone(schedule.timeZone).isValid)

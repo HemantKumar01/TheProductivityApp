@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dueLocalDate, validateDuration } from "./session";
+import { dueLocalDate, scheduleExtendsFocus, validateDuration } from "./session";
 
 test("validates focus duration bounds", () => {
   assert.equal(validateDuration(45), 45);
@@ -22,3 +22,9 @@ test("materializes a schedule in its own timezone once", () => {
   assert.equal(dueLocalDate({ ...schedule, lastMaterializedDate: "2026-09-01" }, now), null);
 });
 
+test("a schedule extends a shorter overlapping focus session", () => {
+  assert.equal(scheduleExtendsFocus(null, 2_000), true);
+  assert.equal(scheduleExtendsFocus(1_500, 2_000), true);
+  assert.equal(scheduleExtendsFocus(2_000, 2_000), false);
+  assert.equal(scheduleExtendsFocus(2_500, 2_000), false);
+});

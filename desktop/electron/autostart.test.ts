@@ -9,6 +9,7 @@ describe("Linux autostart", () => {
   it("builds a hidden graphical-session entry", () => {
     const entry = buildLinuxAutostartEntry(["/opt/deep-focus", "--autostart"]);
     expect(entry).toContain('Exec="/opt/deep-focus" "--autostart"');
+    expect(entry).toContain("Icon=deep-focus");
     expect(entry).toContain("Terminal=false");
     expect(entry).toContain("X-GNOME-Autostart-enabled=true");
   });

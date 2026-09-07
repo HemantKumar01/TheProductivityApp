@@ -31,7 +31,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .shell { min-height: 100vh; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: var(--ink); }
 .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 28px 20px 22px; border-right: 1px solid var(--line); background: #141713; }
 .brand { display: flex; align-items: center; gap: 12px; font: 700 14px/1.05 var(--mono); letter-spacing: .12em; }
-.brand-mark { display: inline-block; width: 25px; height: 25px; border: 6px solid var(--signal); border-right-color: transparent; border-radius: 50%; transform: rotate(-45deg); }
+.brand-mark { width: 27px; height: 27px; flex: 0 0 auto; overflow: visible; color: var(--signal); }
+.brand-mark path { fill: none; stroke: currentColor; stroke-width: 22; stroke-linecap: butt; }
 .sidebar nav { display: grid; gap: 6px; margin-top: 70px; }
 .nav-button { width: 100%; min-height: 52px; display: grid; grid-template-columns: 22px 1fr 18px; align-items: center; gap: 12px; padding: 0 13px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; text-align: left; transition: color 180ms ease, background 180ms ease; }
 .nav-button svg { width: 20px; height: 20px; stroke-width: 1.7; }
@@ -63,6 +64,11 @@ code { color: var(--signal); font: 13px var(--mono); }
 .instrument-status svg { width: 16px; }
 .timer-number { position: relative; z-index: 1; margin-top: 28px; font: 500 clamp(68px, 11vw, 126px)/.9 var(--mono); letter-spacing: -.08em; font-variant-numeric: tabular-nums; }
 .timer-caption { position: relative; z-index: 1; margin: 18px 0 34px; color: var(--muted); }
+.manual-duration { position: relative; z-index: 1; width: min(100%, 320px); display: grid; margin-bottom: 22px; }
+.manual-duration > div { position: relative; }
+.manual-duration input { margin: 0; padding-right: 92px; font: 500 18px var(--mono); }
+.manual-duration > div span { position: absolute; top: 50%; right: 14px; color: var(--muted); font-size: 12px; transform: translateY(-50%); pointer-events: none; }
+.manual-duration small { margin-top: 7px; color: var(--muted); font-size: 11px; }
 .duration-row { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
 .duration-row button, .weekday-row button { min-width: 64px; min-height: 44px; padding: 0 14px; color: #c6cabf; background: transparent; border: 1px solid #444a40; border-radius: 6px; transition: color 180ms, background 180ms, border-color 180ms; }
 .duration-row button:hover, .weekday-row button:hover { border-color: #8f9687; }
@@ -108,12 +114,15 @@ fieldset { padding: 0; margin: 0 0 24px; border: 0; }
 .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .weekday-row button { min-width: 0; padding: 0; }
 .schedule-form .primary-button { margin-top: 8px; }
-.schedule-row { min-height: 82px; display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 14px; border-top: 1px solid var(--line); }
+.schedule-row { min-height: 82px; display: grid; grid-template-columns: 76px 1fr auto 44px; align-items: center; gap: 14px; border-top: 1px solid var(--line); }
 .schedule-row:last-of-type { border-bottom: 1px solid var(--line); }
 .schedule-time { font: 500 20px var(--mono); }
 .schedule-row > div:nth-child(2) { display: grid; gap: 4px; }
 .schedule-row small { color: var(--muted); font-size: 11px; }
 .enabled-pill { padding: 5px 8px; color: var(--ink); background: var(--signal); border-radius: 30px; font: 500 10px var(--mono); text-transform: uppercase; }
+.schedule-delete { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--muted); background: transparent; transition: color 180ms, background 180ms; }
+.schedule-delete:hover:not(:disabled) { color: var(--danger); background: rgba(255,141,123,.08); }
+.schedule-delete svg { width: 18px; }
 .lock-note { display: flex; align-items: center; gap: 9px; margin: 20px 0 0; padding: 12px 14px; border: 1px solid rgba(199,255,74,.24); border-radius: 6px; color: #c8ccbf; background: rgba(199,255,74,.04); font-size: 12px; }
 .lock-note svg { width: 16px; flex: 0 0 auto; color: var(--signal); }
 

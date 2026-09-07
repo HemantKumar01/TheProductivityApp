@@ -24,4 +24,10 @@ const session_1 = require("./session");
     strict_1.default.equal((0, session_1.dueLocalDate)(schedule, now), "2026-09-01");
     strict_1.default.equal((0, session_1.dueLocalDate)({ ...schedule, lastMaterializedDate: "2026-09-01" }, now), null);
 });
+(0, node_test_1.default)("a schedule extends a shorter overlapping focus session", () => {
+    strict_1.default.equal((0, session_1.scheduleExtendsFocus)(null, 2_000), true);
+    strict_1.default.equal((0, session_1.scheduleExtendsFocus)(1_500, 2_000), true);
+    strict_1.default.equal((0, session_1.scheduleExtendsFocus)(2_000, 2_000), false);
+    strict_1.default.equal((0, session_1.scheduleExtendsFocus)(2_500, 2_000), false);
+});
 //# sourceMappingURL=session.test.js.map

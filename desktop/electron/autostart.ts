@@ -13,6 +13,7 @@ export function buildLinuxAutostartEntry(command: string[]): string {
     "Version=1.0",
     "Name=Deep Focus",
     "Comment=Keep focus sessions synchronized and enforced",
+    "Icon=deep-focus",
     `Exec=${command.map(quoteDesktopExecArgument).join(" ")}`,
     "Terminal=false",
     "NoDisplay=true",

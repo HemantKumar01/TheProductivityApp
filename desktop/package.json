@@ -2,10 +2,17 @@
   "name": "@deep-focus/desktop",
   "version": "0.1.0",
   "private": true,
+  "description": "Synchronized, non-interruptible focus sessions for Linux and Windows",
+  "author": "Deep Focus",
+  "desktopName": "deep-focus.desktop",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "vite build && tsc -p tsconfig.electron.json",
+    "package:linux": "npm run build && electron-builder --linux AppImage",
+    "build:windows-service": "dotnet publish windows/DeepFocus.WindowsService/DeepFocus.WindowsService.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -o windows/publish",
+    "test:windows-service": "dotnet test windows/DeepFocus.WindowsService.Tests/DeepFocus.WindowsService.Tests.csproj -c Release",
+    "package:windows": "npm run build:windows-service && npm run build && electron-builder --win nsis --x64",
     "test": "vitest run",
     "preview": "vite preview"
   },
@@ -21,10 +28,63 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
-    "electron": "^37.4.0",
+    "electron": "44.2.0",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.9.2",
     "vite": "^7.1.4",
     "vitest": "^3.2.4",
     "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "dev.deepfocus.desktop",
+    "productName": "Deep Focus",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "windows/publish",
+        "to": "windows-service",
+        "filter": ["**/*"]
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "executableName": "deep-focus",
+      "syncDesktopName": true,
+      "icon": "assets/icon.png",
+      "artifactName": "Deep-Focus-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Deep-Focus-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Deep Focus",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "include": "windows/installer.nsh"
+    }
   }
 }

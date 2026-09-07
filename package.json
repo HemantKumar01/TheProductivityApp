@@ -6,6 +6,8 @@
     "build": "npm run build -w @deep-focus/functions && npm run build -w @deep-focus/desktop",
     "test": "npm run test -w @deep-focus/functions && npm run test -w @deep-focus/desktop",
     "desktop": "npm run dev -w @deep-focus/desktop",
+    "install:desktop": "bash desktop/linux/install-desktop-app.sh",
+    "package:windows": "npm run package:windows -w @deep-focus/desktop",
     "emulators": "firebase emulators:start"
   }
 }

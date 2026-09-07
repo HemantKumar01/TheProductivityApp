@@ -79,4 +79,9 @@ class FocusRepository(
             "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
         )).await()
     }
+
+    suspend fun deleteSchedule(scheduleId: String) {
+        val uid = requireNotNull(auth.currentUser?.uid)
+        db.document("users/$uid/schedules/$scheduleId").delete().await()
+    }
 }

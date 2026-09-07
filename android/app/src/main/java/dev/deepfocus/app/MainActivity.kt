@@ -266,7 +266,16 @@ private fun ScheduleScreen(state: AppState, active: Boolean, viewModel: MainView
         item { Text("Saved schedules", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         if (state.schedules.isEmpty()) item { Text("No repeating sessions yet.", color = Muted) }
         items(state.schedules, key = { it.id }) { schedule ->
-            Surface(shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, Line), color = Surface) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Text(schedule.localTime, fontFamily = FontFamily.Monospace, fontSize = 22.sp); Column(Modifier.weight(1f).padding(horizontal = 16.dp)) { Text(formatDays(schedule.weekdays), fontWeight = FontWeight.Bold); Text("${schedule.durationMinutes} min", color = Muted, fontSize = 12.sp) }; Surface(color = Signal, shape = CircleShape) { Text("ON", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) } } }
+            Surface(shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, Line), color = Surface) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(schedule.localTime, fontFamily = FontFamily.Monospace, fontSize = 22.sp)
+                    Column(Modifier.weight(1f).padding(horizontal = 16.dp)) { Text(formatDays(schedule.weekdays), fontWeight = FontWeight.Bold); Text("${schedule.durationMinutes} min", color = Muted, fontSize = 12.sp) }
+                    Surface(color = Signal, shape = CircleShape) { Text("ON", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) }
+                    if (!active) {
+                        IconButton(onClick = { viewModel.deleteSchedule(schedule.id) }) { Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete schedule", tint = Danger) }
+                    }
+                }
+            }
         }
     }
 }
@@ -293,7 +302,7 @@ private fun BlocklistScreen(state: AppState, active: Boolean, viewModel: MainVie
     }
 }
 
-@Composable private fun Brand() { Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(24.dp).background(Signal, CircleShape)); Spacer(Modifier.width(11.dp)); Text("DEEP FOCUS", fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) } }
+@Composable private fun Brand() { Row(verticalAlignment = Alignment.CenterVertically) { Icon(painterResource(R.drawable.ic_deep_focus_mark), null, tint = Color.Unspecified, modifier = Modifier.size(27.dp)); Spacer(Modifier.width(11.dp)); Text("DEEP FOCUS", fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) } }
 @Composable private fun Eyebrow(text: String, bottom: androidx.compose.ui.unit.Dp = 10.dp) { Text(text, color = Signal, fontFamily = FontFamily.Monospace, fontSize = 10.sp, letterSpacing = 1.2.sp, modifier = Modifier.padding(bottom = bottom)) }
 @Composable private fun LockNote(text: String) { Surface(shape = RoundedCornerShape(7.dp), border = BorderStroke(1.dp, Signal.copy(alpha = .3f)), color = Signal.copy(alpha = .04f)) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Outlined.Lock, null, tint = Signal, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(10.dp)); Text(text, color = Muted, fontSize = 12.sp) } } }
 private fun formatClock(milliseconds: Long): String { val seconds = maxOf(0, (milliseconds + 999) / 1_000); return "%02d:%02d".format(seconds / 60, seconds % 60) }

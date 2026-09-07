@@ -1,0 +1,59 @@
+name: Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "firebase/**"
+      - "package*.json"
+      - ".github/workflows/windows.yml"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "firebase/**"
+      - "package*.json"
+      - ".github/workflows/windows.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Validate Firebase configuration
+        shell: pwsh
+        run: |
+          $required = @(
+            $env:VITE_FIREBASE_API_KEY,
+            $env:VITE_FIREBASE_AUTH_DOMAIN,
+            $env:VITE_FIREBASE_PROJECT_ID,
+            $env:VITE_FIREBASE_APP_ID
+          )
+          if ($required.Where({ [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+            throw "Set the required VITE_FIREBASE_* GitHub repository variables before building Windows."
+          }
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:windows-service -w @deep-focus/desktop
+      - run: npm run package:windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deep-focus-windows-x64
+          path: desktop/release/Deep-Focus-Setup-*-x64.exe
+          if-no-files-found: error
