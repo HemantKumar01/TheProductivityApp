@@ -8,6 +8,11 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 
 class FocusAccessibilityService : AccessibilityService() {
+    // Some launchers resume an existing task without sending a window-state event.
+    private val foregroundEventTypes =
+        AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED or
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
     private var blockedPackages: Set<String> = emptySet()
     private var activeUntilMillis: Long = 0
     private val listeners = mutableListOf<ListenerRegistration>()
@@ -39,7 +44,7 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null || (event.eventType and foregroundEventTypes) == 0) return
         val foregroundPackage = event.packageName?.toString() ?: return
         if (System.currentTimeMillis() < activeUntilMillis && foregroundPackage in blockedPackages) {
             performGlobalAction(GLOBAL_ACTION_HOME)
